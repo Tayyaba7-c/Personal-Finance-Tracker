@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 import matplotlib
-matplotlib.use('Agg') # Server side plotting ke liye zaroori hai
+matplotlib.use('Agg') # Server-side plotting
 import matplotlib.pyplot as plt
 import os
 
@@ -31,7 +31,10 @@ class Expense(db.Model):
 
 @app.route('/')
 def index():
-    return redirect(url_for('login'))
+    # Agar user pehle se login hai to seedha dashboard bhej do
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('index.html') # Ab ye Landing Page khulega
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -72,7 +75,8 @@ def dashboard():
     
     expenses = Expense.query.filter_by(user_id=session['user_id']).all()
     
-    # Visualization
+    # --- Summary & Visualization Logic ---
+    total_spent = sum(ex.amount for ex in expenses) # Total kharcha
     cat_data = {}
     for ex in expenses:
         cat_data[ex.category] = cat_data.get(ex.category, 0) + ex.amount
@@ -90,7 +94,11 @@ def dashboard():
         plt.close()
         chart_url = 'chart.png'
 
-    return render_template('dashboard.html', expenses=expenses, name=session['user_name'], chart=chart_url)
+    return render_template('dashboard.html', 
+                           expenses=expenses, 
+                           name=session['user_name'], 
+                           chart=chart_url,
+                           total_spent=total_spent) # Dashboard par total amount bhejna
 
 @app.route('/add_expense', methods=['POST'])
 def add_expense():
